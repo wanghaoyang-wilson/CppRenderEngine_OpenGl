@@ -1,0 +1,29 @@
+# ---- 构建产物 ----
+build/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.pyd
+*.exe
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+*.egg-info/
+py/package/*
+!py/package/.gitkeep
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ---- 资源（用户本地素材）----
+*.obj.bak

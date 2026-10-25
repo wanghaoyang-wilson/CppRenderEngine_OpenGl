@@ -1,0 +1,35 @@
+# ============================================================
+#  PyRecT3D  NMake Makefile (备选构建方案，Windows)
+#  直接使用 nmake，不依赖 CMake 生成
+#  需要先配置好 VS 环境 (vcvars) 与依赖头文件路径
+# ============================================================
+CC      = cl
+CXX     = cl
+CFLAGS  = /nologo /EHsc /std:c++17 /O2 /DWIN32 /D_WINDOWS /DPYRECT3D_BUILD_DLL=1
+INC     = /I cpp\include
+OUTDIR  = build
+
+# 需要: glad/glew 的头文件与库, pybind11 (可选)
+# 此处为最小可编译示意，完整依赖路径请按本机调整
+
+all: $(OUTDIR)\PyRecT3D.dll
+
+$(OUTDIR):
+	@if not exist $(OUTDIR) mkdir $(OUTDIR)
+
+$(OUTDIR)\PyRecT3D.dll: cpp\src\core\engine.cpp cpp\src\math\math.cpp \
+    cpp\src\renderer\renderer.cpp cpp\src\gui\gui.cpp cpp\src\io\obj_loader.cpp \
+    cpp\src\audio\audio.cpp $(OUTDIR)
+	$(CC) $(CFLAGS) $(INC) /LD \
+	    cpp\src\core\engine.cpp \
+	    cpp\src\math\math.cpp \
+	    cpp\src\renderer\renderer.cpp \
+	    cpp\src\gui\gui.cpp \
+	    cpp\src\io\obj_loader.cpp \
+	    cpp\src\audio\audio.cpp \
+	    /link /OUT:$(OUTDIR)\PyRecT3D.dll \
+	    opengl32.lib user32.lib gdi32.lib winmm.lib ole32.lib
+
+clean:
+	@if exist $(OUTDIR) rmdir /s /q $(OUTDIR)
+	@echo Cleaned.
