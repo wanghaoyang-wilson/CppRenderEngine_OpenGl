@@ -3,9 +3,14 @@ name: publish-docs
 # 文档自动发布：
 #   docs/ 三片 md 或 wiki/ 源文件一变，自动跑 build_docs.sh：
 #     1) 拼接出 docs/API-full.md
-#     2) pandoc 生成 docs/API.docx（二进制文件也走 git commit，绕开只能传文本的 API）
+#     2) pandoc 生成 docs/API.docx（二进制也走 git commit，绕开只能传文本的 API）
 #     3) 把 wiki/*.md 推到 GitHub Wiki 仓库
 # 不需要额外 PAT：GITHUB_TOKEN 对本仓库与 <repo>.wiki.git 都有写权限。
+#
+# 为什么只在 API-full.md 变化时才提交 docx：
+#   pandoc 生成的 docx 内部带创建时间，字节每次都不同，直接 add 会让每次
+#   运行都产生一个空提交。API-full.md 是纯文本拼接，源未变时严格幂等，
+#   所以用它当"源确实变了"的判据。
 on:
   push:
     paths:
@@ -37,14 +42,15 @@ jobs:
           bash build_docs.sh
           ls -l API-full.md API.docx
 
-      - name: commit generated artifacts
+      - name: commit generated artifacts only when sources changed
         run: |
           git config user.name "recT3D docs bot"
           git config user.email "bot@users.noreply.github.com"
-          git add docs/API-full.md docs/API.docx
+          git add docs/API-full.md
           if git diff --cached --quiet; then
-            echo "generated docs unchanged, skip commit"
+            echo "API-full.md unchanged -> source did not change, skip commit"
           else
+            git add docs/API.docx
             git commit -m "docs: 自动生成 API-full.md 与 API.docx"
             git push
           fi
