@@ -1,0 +1,48 @@
+name: deploy-wiki
+
+# 把仓库 wiki/ 下的 markdown 发布到 GitHub Wiki（wiki 是独立仓库），并顺带删除已合并的升级分支。
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: push pages into wiki repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          git clone "$REMOTE" wikitmp && cd wikitmp
+          git config user.name "recT3D bot"
+          git config user.email "bot@users.noreply.github.com"
+          cp ../wiki/Home.md ../wiki/Quick-Start.md ../wiki/Explicit-vs-Implicit.md \
+             ../wiki/Event-Model.md ../wiki/API-Reference.md ../wiki/WASM-Packaging.md \
+             ../wiki/Android.md ../wiki/Hard-Constraints.md ../wiki/Build.md \
+             ../wiki/_Sidebar.md ../wiki/_Footer.md . 2>/dev/null || true
+          git add -A
+          if git diff --cached --quiet; then
+            echo "wiki already up to date"
+          else
+            git commit -m "docs(wiki): 发布 v0.2 全部文档页"
+            git push
+          fi
+          cd ..
+
+      - name: delete merged branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -sS -X DELETE \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/heads/pyr3d-v2-upgrade" \
+            -o /dev/null -w "delete branch http=%{http_code}\n" || true
