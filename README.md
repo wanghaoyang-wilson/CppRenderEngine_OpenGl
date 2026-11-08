@@ -32,7 +32,7 @@
 | **视频** | 全局 `MediaManager` 单例 + 多播放器实例，FFmpeg 子线程解码，**解码帧直接包装成动态材质**贴到任意物体 |
 | **GUI** | 按钮 / 文本 / 输入框 / 容器 / 滚动容器，9 种组件事件，支持贴图 |
 | **模型 IO** | OBJ + MTL 加载 |
-| **跨平台** | Windows（Win7+）/ Linux（X11）/ Android（NDK + GLES3）/ Web（WASM + WebGL2） |
+| **跳平台** | Windows（Win7+）/ Linux（X11）/ Android（NDK + GLES3）/ Web（WASM + WebGL2） |
 
 ### 明确边界
 - 不内置任何游戏逻辑，只提供渲染 / 输入 / 消息 / 碰撞 / 媒体能力
@@ -103,23 +103,36 @@ int main() {
 build.bat
 ```
 
-交互项：
+交互项（回车即取默认值）：
 ```
-[1/5] 产物类型：1 = DLL（LoadLibrary 动态加载）  2 = LIB（静态链接）
-[2/5] CL 编译器路径（回车 = 使用 PATH 中的 cl.exe）
-[3/5] 构建配置：Release（O2 全程序优化）/ Debug
-[4/5] 是否裁剪模块：GUI / 视频 / 音频 / 物理 / 软光追
-[5/5] 是否启用外部 FFmpeg
+[1/6] 产物类型：1 = DLL（调用侧只用 cpp\include + LoadLibraryA）  2 = LIB（静态）
+[2/6] CL 编译路径：回车 = 自动用 vswhere 找 VS，找不到再用 PATH 里的 cl.exe
+[3/6] 配置：Release（/O2 /GL + LTCG）/ Debug（/Od /Zi）
+[4/6] GL 后端：0 = 只有软件光栅化（最小体积）/ 1 = glad + GL33/GLES3
+[5/6] 模块裁剪：GUI / 视频 / 音频 / 物理（不编就是不编，对应 API 返回 false）
+       + 是否额外编 examples
+[6/6] 确认清单，并单独询问「是否把被裁掉的源码从磁盘上删掉」（默认 n）
 ```
+
+`build.bat` 内部只用 `cl.exe` / `link.exe` / `lib.exe`，不调用 CMake、不调用 NMake。
+`CMakeLists.txt` 仍然保留，但只是给 IDE 或包管理用的可选路径。
+
+**调用侧怎么接**
+
+- DLL：include 只加 `cpp\include`，`LoadLibraryA("PyRecT3D.dll")` + `GetProcAddress`。
+- LIB：自己的工程加 `/DPYRECT3D_STATIC=1`（否则 `export.h` 会当成 dllimport 去找导入库），
+  再链接 `build\PyRecT3D.lib`。
 
 ### Linux
 
 ```bash
-./build.sh                      # shared + Release + 全模块
-./build.sh static               # 静态库 libPyRecT3D.a
-./build.sh static release trim  # 交互式裁剪模块
-./build/smoke_v2                # 无头冒烟测试（42 项）
+./build.sh                      # 共享库 + Release + 全模块 + GL 关
+./build.sh --static             # 静态库 libPyRecT3D.a
+./build.sh --gl=on --tests      # 开 GL 并编译运行冒烟测试
+./build.sh --trim=video,audio   # 裁剪视频与音频模块
 ```
+
+`build.sh` 同样不依赖 CMake，直接调 g++。
 
 ### 产物
 
@@ -131,7 +144,7 @@ build.bat
 
 ---
 
-## 跨平台分发
+## 跳平台分发
 
 | 平台 | 目录 | 说明 |
 |------|------|------|
@@ -147,28 +160,34 @@ build.bat
 
 ```
 PyRecT3D/
-├── CMakeLists.txt          # 主构建（DLL/LIB、模块裁剪、O3 瘦身）
-├── build.bat / build.sh    # 一键交互式构建
+├── build.bat               # Windows 交互式构建（只用 cl.exe/link.exe/lib.exe，不依赖 CMake/NMake）
+├── build.sh                # Linux / GLES 构建（直接用 g++，不依赖 CMake）
+├── CMakeLists.txt          # 可选：给需要 IDE / 包管理的场景用
 ├── LICENSE                 # GPL-3.0
 ├── cpp/
-│   ├── include/PyRecT3D/   # 对外契约头文件（仅声明）
+│   ├── LAYOUT.md           # 目录分类规范：新代码该放哪、依赖方向
+│   ├── include/PyRecT3D/   # 对外契约头文件（仅声明，调用侧只需要这一层）
 │   │   ├── export.h  math.h  core.h
 │   │   ├── message.h       # 主/子消息队列、事件优先级
 │   │   ├── explicit.h      # 显式 API
 │   │   ├── implicit.h      # 隐式 API
-│   │   ├── renderer.h  gui.h  collision.h  video.h  audio.h  io.h
-│   └── src/
-│       ├── core/           # 引擎 / 消息队列 / 显式 / 隐式 / 平台粘合
-│       ├── renderer/       # 渲染 + 合成层
-│       ├── physics/        # 双碰撞箱
-│       ├── media/          # FFmpeg 播放器
-│       └── gui/ io/ audio/ math/ binding/
+│   │   └── renderer.h  gui.h  collision.h  video.h  audio.h  io.h
+│   ├── src/                # 按职责分层，依赖单向
+│   │   ├── foundation/     # 最底层：math/ 与 io/
+│   │   ├── core/           # 引擎 / 消息队列 / 显式 / 隐式 / platform/
+│   │   ├── graphics/       # renderer + gl_backend + compositor
+│   │   ├── ui/             # 2D 界面
+│   │   ├── physics/        # 双碰撞箱
+│   │   ├── media/          # FFmpeg 播放器
+│   │   ├── audio/
+│   │   └── bindings/python/  # pybind11，一个 bind_*.cpp 对一个头文件
+│   └── third_party/glad/   # 轻量 GL 加载器（自研，17 KB）
 ├── examples_cpp/           # basic_cube / explicit_demo / implicit_demo
 ├── tests/smoke_v2.cpp      # 无头冒烟测试
-├── docs/                   # 接口文档（见下方「文档」）
+├── docs/                   # API.md + API.docx（权威接口文档）
 ├── WEB/                    # WASM 单包 / 多包 + 桥接层
 ├── Android/apk/            # APK 占位
-└── wiki/                   # GitHub Wiki 页源文件 + 发布脚本
+└── wiki/                   # GitHub Wiki 页源文件
 ```
 
 ---
@@ -177,28 +196,11 @@ PyRecT3D/
 
 | 文件 | 说明 |
 |------|------|
-| [`docs/API.md`](docs/API.md) | 公共 API 完整参考 **第 1 部分**（0-9 章：阅读路线 / 双 API / 总索引 / export / math / core / message / explicit / implicit / renderer） |
-| [`docs/API-part2.md`](docs/API-part2.md) | 公共 API 完整参考 **第 2 部分**（10-21 章：GUI / 碰撞 / 视频 / 硬约束 / 构建 / WASM / Android / 变更 / AI 模板） |
-| [`docs/README.md`](docs/README.md) | 文档构成说明与 AI 读文档指引 |
+| [`docs/API.md`](docs/API.md) | 全量公共 API 参考（含签名、约束、示例、AI 调用模板） |
+| [`docs/API.docx`](docs/API.docx) | 同一内容的 Word 版本，便于分发 |
+| `docs/build_docs.sh` | 三片拼接 + pandoc 生成 docx |
 
-> **给 AI 用**：先拼成单文件，再整份喂给它即可：
-> ```bash
-> python3 docs/make_api.py            # → docs/API-full.md（单份完整文档）
-> ./docs/build_docs.sh                # → API-full.md + API.docx（需 pandoc）
-> ```
-> `docs/API-full.md` / `docs/API.docx` 是**派生文件**，不进版本库；Word 版用 pandoc 一行生成。
-
----
-
-## 在线文档（Wiki）
-
-仓库内 `wiki/` 是 GitHub Wiki 源文件（Home / Quick Start / Explicit vs Implicit / API Reference / Event Model / Hard Constraints / Build / WASM Packaging / Android）与一键发布脚本：
-
-```bash
-./wiki/publish_wiki.sh <username> <repo>
-```
-
-使用前需先在 GitHub 网页建好第一个 Wiki 页（否则 `.wiki.git` 不存在）。
+> **给 AI 用**：只需把 `docs/API.md` 整份喂给它，即可在不读源码的前提下产出正确调用代码。
 
 ---
 
