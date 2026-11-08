@@ -1,0 +1,38 @@
+name: doc-paths-cleanup
+
+# 一次性：把文档里对旧目录路径的引用改成新分层路径，并删掉上一个临时 workflow。
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: rewrite doc paths
+        run: |
+          set -u
+          if [ -f docs/API-part3.md ]; then
+            sed -i 's|cpp/src/binding/|cpp/src/bindings/python/|g; s|cpp/src/renderer/|cpp/src/graphics/|g' docs/API-part3.md
+          fi
+          for f in docs/API.md docs/API-part2.md docs/API-full.md wiki/*.md; do
+            if [ -f "$f" ]; then
+              sed -i 's|cpp/src/binding/|cpp/src/bindings/python/|g; s|cpp/src/renderer/|cpp/src/graphics/|g' "$f"
+            fi
+          done
+
+          git config user.name "recT3D bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no doc path changes"
+          else
+            git commit -m "docs: 文档中的目录引用改用分层路径"
+            git push
+          fi
