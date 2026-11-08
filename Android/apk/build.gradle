@@ -1,0 +1,49 @@
+// ============================================================
+//  PyRecT3D — Android 构建脚本占位（Gradle）
+//  说明：引擎本体是原生 C++（NDK 构建），此处只负责打包 APK。
+// ============================================================
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.pyrect3d.runtime'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "org.pyrect3d.runtime"
+        minSdk 21            // Android 5.0+，GLES3 可用
+        targetSdk 34
+        versionCode 2
+        versionName "0.2.0"
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DPYRECT3D_LIB_TYPE=static",
+                          "-DPYRECT3D_PLATFORM_ANDROID=ON"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "jni/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // 发布瘦身：仅保留 arm64
+        }
+    }
+}
+
+dependencies {
+    // 无第三方 UI 依赖：渲染与输入全部由 PyRecT3D 原生实现
+}
