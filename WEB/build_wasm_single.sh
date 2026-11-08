@@ -20,13 +20,16 @@ mkdir -p "$OUT"
 SRC=$(find cpp/src -name '*.cpp' \
       ! -name 'win7_input.cpp' \
       ! -name 'x11_input.cpp' \
-      ! -name 'binding.cpp')
+      ! -name 'binding.cpp' \
+      ! -name 'bind_*.cpp')
 
 echo "=================================================="
 echo " 构建 WASM 单包（GLES3 / WebGL2）"
 echo "=================================================="
 
-emcc $SRC \
+# 导出符号表必须与 WEB/web_entry.cpp 的 extern "C" 一一对应。
+# --no-entry：浏览器 / Node 没有 main() 概念，全部调用走导出函数。
+em++ $SRC WEB/web_entry.cpp \
   -Icpp/include -Icpp/src \
   -std=c++17 \
   -O3 \
@@ -34,13 +37,14 @@ emcc $SRC \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME=createPyRecT3D \
-  -s ENVIRONMENT=web \
-  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  -s ENVIRONMENT=web,node \
+  --no-entry \
+  -s EXPORTED_FUNCTIONS='["_pyr3d_version","_pyr3d_smoke_run","_pyr3d_pass_count","_pyr3d_fail_count","_malloc","_free"]' \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
   -s ASSERTIONS=0 \
   -s DISABLE_EXCEPTION_CATCHING=1 \
   -DPYRECT3D_PLATFORM_WEB=1 \
   -DPYRECT3D_WITH_FFMPEG=0 \
-  --use-preload-plugins \
   -o "$OUT/pyr3d_single.js"
 
 echo
