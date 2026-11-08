@@ -1,25 +1,14 @@
 #!/usr/bin/env bash
-# ==========================================================
-#  PyRecT3D 文档构建：md 全集 + docx
-#  依赖：python3、pandoc
-#  用法：./docs/build_docs.sh
-# ==========================================================
-set -e
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# 生成 docs/API.docx：先拼三片，再用 pandoc 出带目录的 Word
+set -euo pipefail
+cd "$(dirname "$0")"
 
-echo "[1/2] 拼接 API.md + API-part2.md → API-full.md"
-python3 "$ROOT/docs/make_api.py"
+python3 make_api.py
 
-echo "[2/2] 生成 API.docx"
 if ! command -v pandoc >/dev/null 2>&1; then
-  echo "✗ 未找到 pandoc，请先安装："
-  echo "   Ubuntu : sudo apt install pandoc"
-  echo "   macOS  : brew install pandoc"
-  echo "   Windows: choco install pandoc"
+  echo "[build_docs] 未找到 pandoc，请先安装（apt install pandoc / brew install pandoc）" >&2
   exit 1
 fi
 
-pandoc "$ROOT/docs/API-full.md" -o "$ROOT/docs/API.docx" \
-  --toc --toc-depth=2
-
-echo "✓ 完成：docs/API-full.md 与 docs/API.docx"
+pandoc API-full.md -o API.docx --toc --toc-depth=2
+echo "[build_docs] 已生成 API.docx（$(stat -c%s API.docx 2>/dev/null || stat -f%z API.docx) 字节）"
