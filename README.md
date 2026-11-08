@@ -165,10 +165,10 @@ PyRecT3D/
 │       └── gui/ io/ audio/ math/ binding/
 ├── examples_cpp/           # basic_cube / explicit_demo / implicit_demo
 ├── tests/smoke_v2.cpp      # 无头冒烟测试
-├── docs/                   # API.md + API.docx（权威接口文档）
+├── docs/                   # 接口文档（见下方「文档」）
 ├── WEB/                    # WASM 单包 / 多包 + 桥接层
 ├── Android/apk/            # APK 占位
-└── wiki/                   # GitHub Wiki 页源文件
+└── wiki/                   # GitHub Wiki 页源文件 + 发布脚本
 ```
 
 ---
@@ -177,10 +177,28 @@ PyRecT3D/
 
 | 文件 | 说明 |
 |------|------|
-| [`docs/API.md`](docs/API.md) | 全量公共 API 参考（含签名、约束、示例、AI 调用模板） |
-| [`docs/API.docx`](docs/API.docx) | 同一内容的 Word 版本，便于分发 |
+| [`docs/API.md`](docs/API.md) | 公共 API 完整参考 **第 1 部分**（0-9 章：阅读路线 / 双 API / 总索引 / export / math / core / message / explicit / implicit / renderer） |
+| [`docs/API-part2.md`](docs/API-part2.md) | 公共 API 完整参考 **第 2 部分**（10-21 章：GUI / 碰撞 / 视频 / 硬约束 / 构建 / WASM / Android / 变更 / AI 模板） |
+| [`docs/README.md`](docs/README.md) | 文档构成说明与 AI 读文档指引 |
 
-> **给 AI 用**：只需把 `docs/API.md` 整份喂给它，即可在不读源码的前提下产出正确调用代码。
+> **给 AI 用**：先拼成单文件，再整份喂给它即可：
+> ```bash
+> python3 docs/make_api.py            # → docs/API-full.md（单份完整文档）
+> ./docs/build_docs.sh                # → API-full.md + API.docx（需 pandoc）
+> ```
+> `docs/API-full.md` / `docs/API.docx` 是**派生文件**，不进版本库；Word 版用 pandoc 一行生成。
+
+---
+
+## 在线文档（Wiki）
+
+仓库内 `wiki/` 是 GitHub Wiki 源文件（Home / Quick Start / Explicit vs Implicit / API Reference / Event Model / Hard Constraints / Build / WASM Packaging / Android）与一键发布脚本：
+
+```bash
+./wiki/publish_wiki.sh <username> <repo>
+```
+
+使用前需先在 GitHub 网页建好第一个 Wiki 页（否则 `.wiki.git` 不存在）。
 
 ---
 
