@@ -131,17 +131,45 @@ Entity* Scene::getEntity(std::int64_t id) {
     return it == impl_->entities.end() ? nullptr : it->second.ptr;
 }
 
+// 克隆：拷贝场上现有实体当前状态（位置 / 旋转 / 缩放）
+std::int64_t Scene::cloneEntity(std::int64_t id) {
+    Entity* src = getEntity(id);
+    if (!src) return -1;
+    Entity* dst = new Entity(0);
+    dst->setPosition(src->position());
+    dst->setScale(src->scale());
+    dst->setRotation(src->rotation());
+    return addEntity(dst);
+}
+
+// 召唤：以模板实体的缩放入参、给定位置新建实例
+std::int64_t Scene::summonEntity(std::int64_t prototypeId, const Vec3& position) {
+    Entity* proto = getEntity(prototypeId);
+    Vec3 scaleRef = proto ? proto->scale() : Vec3(1, 1, 1);
+    Entity* dst = new Entity(0);
+    dst->setPosition(position);
+    dst->setScale(scaleRef);
+    return addEntity(dst);
+}
+
+std::size_t Scene::entityCount() const { return impl_->entities.size(); }
+
+void Scene::forEach(const std::function<void(std::int64_t, Entity&)>& fn) const {
+    for (auto& kv : impl_->entities) fn(kv.first, *kv.second.ptr);
+}
+
 RaycastHit Scene::raycast(const Ray& ray) {
     RaycastHit best;
     float bestT = 1e30f;
     for (auto& kv : impl_->entities) {
         float tNear, tFar;
         if (!kv.second.box.intersect(ray, tNear, tFar)) continue;
-        if (tNear > 0.f && tNear < bestT) {
-            bestT = tNear;
+        float t = (tNear > 0.f) ? tNear : tFar;   // 起点在盒内时 tNear<0，取 tFar
+        if (t < bestT) {
+            bestT = t;
             best.hit = true;
-            best.distance = tNear;
-            best.point = ray.origin + ray.direction * tNear;
+            best.distance = t;
+            best.point = ray.origin + ray.direction * t;
             best.normal = Vec3(0, 1, 0); // 演示法线
             best.entityId = kv.first;
         }
