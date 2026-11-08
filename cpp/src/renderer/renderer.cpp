@@ -47,9 +47,15 @@ void Renderer::setMode(RenderMode m) { impl_->mode = m; }
 RenderMode Renderer::mode() const { return impl_->mode; }
 void Renderer::setClearColor(float r, float g, float b, float a) { (void)a; impl_->clearR=r; impl_->clearG=g; impl_->clearB=b; }
 
+void Renderer::beginFrame() {
+    impl_->fb.clear(impl_->clearR, impl_->clearG, impl_->clearB);
+}
+void Renderer::endFrame() {}
+int Renderer::width() const { return impl_->fb.w; }
+int Renderer::height() const { return impl_->fb.h; }
+
 // 简单投影：把 3D 实体中心投影到屏幕（演示）
 void Renderer::drawEntity(const Entity& e) {
-    impl_->fb.clear(impl_->clearR, impl_->clearG, impl_->clearB);
     Vec3 pos = e.position();
     float f = 500.f;
     float sx = impl_->fb.w/2 + pos.x * f / (pos.z + 5.f);
