@@ -15,14 +15,24 @@ namespace pyrect3d {
 
 struct PYRECT3D_API Rect {
     float x = 0, y = 0, w = 0, h = 0;
+    Rect() = default;
+    Rect(float x_, float y_, float w_, float h_) : x(x_), y(y_), w(w_), h(h_) {}
     bool contains(float px, float py) const;
 };
 
-// 事件类型
+// 事件类型（v0.2 扩充：不再只有 hover / click）
 struct PYRECT3D_API GuiEvent {
-    bool hovered = false;
-    bool clicked = false;
+    bool hovered = false;   // 指针在组件内
+    bool clicked = false;   // 在组件内按下并松开（完整点击）
+    bool entered = false;   // 指针进入组件区域
+    bool exited  = false;   // 指针离开组件区域
+    bool pressed = false;   // 在组件内按下
+    bool released = false;  // 在组件内松开
+    bool dragMove = false;  // 按住并在组件内移动
+    bool draggedOut = false;// 按住并移出组件区域
+    bool clickOutside = false; // 拖出后在区域外松开
     int  mouseX = 0, mouseY = 0;
+    float dragDx = 0.f, dragDy = 0.f;  // 拖拽位移
 };
 
 class PYRECT3D_API Widget {
@@ -55,8 +65,19 @@ public:
     void onEvent(const GuiEvent& e) override;
     void draw() override;
 
+    // v0.1
     std::function<void()> onClick;
     std::function<void()> onHover;
+
+    // v0.2 新增组件级事件
+    std::function<void()> onEnter;
+    std::function<void()> onExit;
+    std::function<void()> onPress;
+    std::function<void()> onRelease;
+    std::function<void(float dx, float dy)> onDragMove;
+    std::function<void()> onDragOut;
+    std::function<void()> onClickOutside;
+
     std::string text;
 
 private:
