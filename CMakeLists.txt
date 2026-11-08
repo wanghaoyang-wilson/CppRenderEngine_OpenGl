@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(PyRecT3D VERSION 0.2.0 LANGUAGES CXX)
+project(PyRecT3D VERSION 0.2.0 LANGUAGES C CXX)
 
 # ============================================================
 #  PyRecT3D — C++ OpenGL 2D/3D 渲染引擎（v0.2）
@@ -38,6 +38,7 @@ option(PYRECT3D_WITH_AUDIO    "编译音频模块"       ON)
 option(PYRECT3D_WITH_PHYSICS  "编译物理/碰撞模块"   ON)
 option(PYRECT3D_WITH_RAYTRACER "编译软光追模块"     ON)
 option(PYRECT3D_WITH_FFMPEG   "使用外部 FFmpeg 解码" OFF)
+option(PYRECT3D_WITH_GL       "启用 glad + 真实 OpenGL 后端（默认软件回退）" OFF)
 
 # ---------- 源文件清单（分类） ----------
 set(PYRECT3D_SOURCES
@@ -54,7 +55,14 @@ set(PYRECT3D_SOURCES
   # renderer
   ${PYRECT3D_SRC_DIR}/renderer/renderer.cpp
   ${PYRECT3D_SRC_DIR}/renderer/compositor.cpp
+  ${PYRECT3D_SRC_DIR}/renderer/gl_backend.h
+  ${PYRECT3D_SRC_DIR}/renderer/gl_backend.cpp   # 未开 GL 时编译为空实现
 )
+
+# GL 后端：glad 加载器（GL 3.3 Core / GLES 3.0 共用）
+if(PYRECT3D_WITH_GL)
+  list(APPEND PYRECT3D_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cpp/third_party/glad/glad.c)
+endif()
 
 if(PYRECT3D_WITH_GUI)
   list(APPEND PYRECT3D_SOURCES ${PYRECT3D_SRC_DIR}/gui/gui.cpp)
@@ -84,6 +92,7 @@ add_library(PyRecT3D ${_libtype} ${PYRECT3D_SOURCES})
 target_include_directories(PyRecT3D
   PUBLIC  ${PYRECT3D_INCLUDE_DIR}
   PRIVATE ${PYRECT3D_SRC_DIR}
+          ${CMAKE_CURRENT_SOURCE_DIR}/cpp/third_party/glad
 )
 target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_BUILD_DLL=1)
 
@@ -110,6 +119,13 @@ else()
 endif()
 if(PYRECT3D_WITH_FFMPEG)
   target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_FFMPEG=1)
+endif()
+if(PYRECT3D_WITH_GL)
+  target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_GL=1)
+  message(STATUS "PyRecT3D: GL 后端已启用（glad + GL33/GLES3）")
+else()
+  target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_GL=0)
+  message(STATUS "PyRecT3D: GL 后端未启用，使用内置软件光栅化回退")
 endif()
 
 # ---------- 平台链接 ----------
@@ -141,13 +157,37 @@ if(PYRECT3D_BUILD_PYTHON)
   find_package(Python3 COMPONENTS Interpreter Development QUIET)
   find_package(pybind11 CONFIG QUIET)
   if(pybind11_FOUND AND Python3_FOUND)
-    pybind11_add_module(pyrect3d_binding ${PYRECT3D_SRC_DIR}/binding/binding.cpp)
+    # Python 绑定按头文件分文件实现，一个 bind_*.cpp 对应一个模块（便于裁剪与维护）
+    pybind11_add_module(pyrect3d_binding
+      ${PYRECT3D_SRC_DIR}/binding/binding.cpp
+      ${PYRECT3D_SRC_DIR}/binding/binding_common.h
+      ${PYRECT3D_SRC_DIR}/binding/bind_math.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_core.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_message.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_explicit.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_renderer.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_gui.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_collision.cpp
+      ${PYRECT3D_SRC_DIR}/binding/bind_media.cpp
+    )
     target_include_directories(pyrect3d_binding PRIVATE ${PYRECT3D_INCLUDE_DIR})
     target_link_libraries(pyrect3d_binding PRIVATE PyRecT3D)
     set_target_properties(pyrect3d_binding PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/py/package"
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/py/package"
+      # 运行时从模块同目录找 libPyRecT3D.so，避免绑定死构建机的 /tmp 路径
+      INSTALL_RPATH "$ORIGIN"
+      BUILD_WITH_INSTALL_RPATH TRUE
     )
+    # 共享库版本：把引擎库一起放进 py/package，pip 包才能独立分发
+    if(PYRECT3D_LIB_TYPE STREQUAL "shared")
+      add_custom_command(TARGET pyrect3d_binding POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:PyRecT3D>
+                "${CMAKE_CURRENT_SOURCE_DIR}/py/package"
+        COMMENT "Copy libPyRecT3D to py/package"
+      )
+    endif()
   else()
     message(WARNING "pybind11 / Python3 not found. Python binding skipped.")
   endif()
