@@ -1,0 +1,69 @@
+name: publish-docs
+
+# 文档自动发布：
+#   docs/ 三片 md 或 wiki/ 源文件一变，自动跑 build_docs.sh：
+#     1) 拼接出 docs/API-full.md
+#     2) pandoc 生成 docs/API.docx（二进制文件也走 git commit，绕开只能传文本的 API）
+#     3) 把 wiki/*.md 推到 GitHub Wiki 仓库
+# 不需要额外 PAT：GITHUB_TOKEN 对本仓库与 <repo>.wiki.git 都有写权限。
+on:
+  push:
+    paths:
+      - 'docs/API.md'
+      - 'docs/API-part2.md'
+      - 'docs/API-part3.md'
+      - 'docs/build_docs.sh'
+      - 'docs/make_api.py'
+      - 'wiki/**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: install pandoc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
+      - name: build API-full.md + API.docx
+        run: |
+          cd docs
+          bash build_docs.sh
+          ls -l API-full.md API.docx
+
+      - name: commit generated artifacts
+        run: |
+          git config user.name "recT3D docs bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs/API-full.md docs/API.docx
+          if git diff --cached --quiet; then
+            echo "generated docs unchanged, skip commit"
+          else
+            git commit -m "docs: 自动生成 API-full.md 与 API.docx"
+            git push
+          fi
+
+      - name: publish wiki pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          rm -rf /tmp/wiki && git clone "$REMOTE" /tmp/wiki
+          cp wiki/*.md /tmp/wiki/
+          cd /tmp/wiki
+          git config user.name "recT3D docs bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "wiki already up to date"
+          else
+            git commit -m "docs(wiki): 同步仓库 wiki/ 源文件"
+            git push
+          fi
