@@ -15,7 +15,7 @@
 
 1. 先看 **第 1 章「产品由两部分组成」**，判断该用 *显式 API* 还是 *隐式 API*。
 2. 再看 **第 2 章「公共 API 总索引」**，找你要用的函数名。
-3. 用 **第 3 章以后** 的逐条签名抄代码。
+3. 用 **第 3 章以后** 的逐条签名拄代码。
 4. 涉及线程、渲染顺序、资源释放，**必须遵守第 14 章「硬约束」**，否则会崩溃或显存泄漏。
 
 > 一句话总结用法：
@@ -275,7 +275,7 @@ enum class Key : int {
 };
 ```
 
-> 这是**默认输入接管集合**，不追求全键位覆盖。需要更多键位时走消息队列自定义事件（§7）。
+> 这是**默认输入接管集合**，不追求全键位覆盖。需要更多键位时走消息队列自定义事件（§6/§7）。
 
 ### 5.2 `InputState`
 
@@ -758,8 +758,8 @@ EntityHandle cube(float x = 0, float y = 0, float z = -5,
 EntityHandle screenCube(float x, float y, float w, float h);
 
 // 克隆 / 召唤
-EntityHandle clone(EntityHandle src);                              // 复制场上状态
-u EntityHandle summon(EntityHandle prototype, float x, float y, float z); // 按模板新建
+EntityHandle clone(EntityHandle src);                                  // 复制场上状态
+EntityHandle summon(EntityHandle prototype, float x, float y, float z); // 按模板新建
 
 // 变换（内部转成消息，以主消息队列身份发布）
 void move(EntityHandle e, float x, float y, float z);
@@ -829,7 +829,7 @@ public:
     bool init(int width, int height);
     void shutdown();
 
-    // v0.2 帧边界：beginFrame 清屏一次，之后多次 drawEntity 累计
+    // v0.2 帧边界：beginFrame 清屏一次，之后多次 drawEntity 累积
     void beginFrame();
     void endFrame();
 
