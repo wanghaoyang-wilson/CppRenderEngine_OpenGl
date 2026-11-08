@@ -3,6 +3,11 @@
 > **本文件的定位**：写给「AI 或人类读者只看这一份文档，就能完整使用/复刻本引擎全部能力」的**唯一权威接口文档**。
 > 你不需要通读整个库的源码；把本文档喂给 AI，按本文档调用即可产出可用代码。
 
+> **分片说明**（v0.2 起为跨单文件上传上限拆为三份，`docs/make_api.py` 自动拼接）：
+> - `docs/API.md`：第 0–9 章（总览 / 数学 / 核心 / 消息队列 / 显式 API / 隐式 API / 渲染）
+> - `docs/API-part2.md`：第 10–17 章（GUI / 碰撞 / 视频 / IO / 硬约束 / 构建 / WASM / Android）
+> - `docs/API-part3.md`：第 18–22 章（Python 绑定 / 错误约定 / 变更 / AI 模板 / GL+glad 后端）
+
 - 引擎版本：`0.2.0`
 - 语言：C++17（对外契约头文件）+ Python（pybind11 绑定）
 - 图形：桌面 OpenGL 3.3 Core ／ Android + Web `OpenGL ES 3.0`（WebGL2）
@@ -15,7 +20,7 @@
 
 1. 先看 **第 1 章「产品由两部分组成」**，判断该用 *显式 API* 还是 *隐式 API*。
 2. 再看 **第 2 章「公共 API 总索引」**，找你要用的函数名。
-3. 用 **第 3 章以后** 的逐条签名拄代码。
+3. 用 **第 3 章以后** 的逐条签名抄代码。
 4. 涉及线程、渲染顺序、资源释放，**必须遵守第 14 章「硬约束」**，否则会崩溃或显存泄漏。
 
 > 一句话总结用法：
@@ -58,7 +63,7 @@ PyRecT3D 对外暴露 **两套平行 API**，共用同一个内核（同一份�
 | UI | 自动绑定唯一窗口，`quick::button()` 即可 |
 | 视频 | 自动绑定唯一窗口子队列，`quick::video()` 即可 |
 | 对象 id | 用 `EntityHandle`（`quick::` 返回），不是裸指针 |
-| 出现第二个窗口 | 隐式 API 不支持，必须切换显式 API |
+| 出现第二个窗口 | 隐式 API 不支持，必须切显式 API |
 
 ### 1.3 两套 API 的选择判据
 
@@ -275,7 +280,7 @@ enum class Key : int {
 };
 ```
 
-> 这是**默认输入接管集合**，不追求全键位覆盖。需要更多键位时走消息队列自定义事件（§6/§7）。
+> 这是**默认输入接管集合**，不追求全键位覆盖。需要更多键位时走消息队列自定义事件（§7）。
 
 ### 5.2 `InputState`
 
@@ -758,7 +763,7 @@ EntityHandle cube(float x = 0, float y = 0, float z = -5,
 EntityHandle screenCube(float x, float y, float w, float h);
 
 // 克隆 / 召唤
-EntityHandle clone(EntityHandle src);                                  // 复制场上状态
+EntityHandle clone(EntityHandle src);                              // 复制场上状态
 EntityHandle summon(EntityHandle prototype, float x, float y, float z); // 按模板新建
 
 // 变换（内部转成消息，以主消息队列身份发布）
@@ -932,3 +937,4 @@ public:
 > 主线程只负责 `Compositor::present()`，避免卡死。
 
 ---
+
