@@ -1,0 +1,45 @@
+name: relocate-cpp-sources
+
+# 一次性任务：按 cpp/LAYOUT.md 的分层结构搬移源码。
+# 为什么用 git mv 而不是重新上传：搬移过程中文件内容一个字节不变，
+# 让 GitHub 自己执行 git mv 能保留 git 历史，也避免人为转录出错。
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  relocate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: git mv sources into layered layout
+        run: |
+          set -u
+          mkdir -p cpp/src/graphics cpp/src/foundation/math cpp/src/foundation/io cpp/src/ui cpp/src/bindings/python
+
+          for f in renderer.cpp compositor.cpp gl_backend.h gl_backend.cpp; do
+            if [ -f "cpp/src/renderer/$f" ]; then git mv "cpp/src/renderer/$f" "cpp/src/graphics/$f"; fi
+          done
+          if [ -f cpp/src/math/math.cpp ]; then git mv cpp/src/math/math.cpp cpp/src/foundation/math/math.cpp; fi
+          if [ -f cpp/src/io/obj_loader.cpp ]; then git mv cpp/src/io/obj_loader.cpp cpp/src/foundation/io/obj_loader.cpp; fi
+          if [ -f cpp/src/gui/gui.cpp ]; then git mv cpp/src/gui/gui.cpp cpp/src/ui/gui.cpp; fi
+          for f in cpp/src/binding/*; do
+            if [ -f "$f" ]; then git mv "$f" "cpp/src/bindings/python/$(basename "$f")"; fi
+          done
+          if [ -f Makefile.nmake ]; then git rm -q Makefile.nmake; fi
+          rmdir cpp/src/renderer cpp/src/math cpp/src/io cpp/src/gui cpp/src/binding 2>/dev/null || true
+
+          git config user.name "recT3D bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing to relocate, exiting"
+            exit 0
+          fi
+          git commit -m "refactor(cpp): 按 LAYOUT.md 分层搬移源码，内容零改动"
+          git push
