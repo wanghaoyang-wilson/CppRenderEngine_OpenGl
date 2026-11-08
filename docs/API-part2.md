@@ -1,10 +1,3 @@
-# PyRecT3D v0.2 — 公共 API 完整参考（第二部分）
-
-本文件为 `docs/API.md` 的续篇（第 10-21 章）。请与第一部分（第 0-9 章）合并阅读；
-完整合成版由 `docs/make_api.py` 自动拼接生成。
-
----
-
 ## 10. GUI API（gui.h）
 
 ### 10.1 `Rect`
@@ -476,16 +469,17 @@ PyRecT3D/
 │   └── src/
 │       ├── core/           # 引擎/消息队列/显式/隐式/平台粘合
 │       ├── math/
-│       ├── renderer/       # 渲染 + 合成层
+│       ├── renderer/       # 渲染 + 合成层 + gl_backend
 │       ├── gui/
 │       ├── io/
 │       ├── audio/
 │       ├── physics/        # 双碰撞箱
 │       ├── media/          # FFmpeg 播放器
-│       └── binding/        # pybind11
+│       └── binding/        # pybind11（一个头文件一份）
+│   └── third_party/glad/   # 自带 GL 加载器
 ├── examples_cpp/           # basic_cube / explicit_demo / implicit_demo
 ├── tests/smoke_v2.cpp      # 无头冒烟测试
-├── docs/API.md + API.docx  # 本文件
+├── docs/                   # API.md + API-part2/3.md + API.docx
 ├── WEB/                    # WASM 单包 / 多包
 ├── Android/apk/            # APK 占位
 └── wiki/                   # GitHub Wiki 页源文件
@@ -512,6 +506,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -DPYRECT3D_WITH_PHYSICS=ON \
       -DPYRECT3D_WITH_RAYTRACER=ON \
       -DPYRECT3D_WITH_FFMPEG=OFF \
+      -DPYRECT3D_WITH_GL=OFF \
       -DPYRECT3D_BUILD_PYTHON=ON \
       -DPYRECT3D_BUILD_EXAMPLES=ON \
       -DPYRECT3D_BUILD_TESTS=ON ..
@@ -582,100 +577,3 @@ app.start();
 > **不支持 Apple 平台**（iOS / macOS）。不引入 Xcode / Objective-C 工具链。
 
 ---
-
-## 18. Python 绑定
-
-```bash
-pip install pybind11
-python py/build.py        # 或 cmake -DPYRECT3D_BUILD_PYTHON=ON
-```
-
-```python
-import pyrect3d
-
-app = pyrect3d.Engine()
-app.init(1280, 720, "PyRecT3D")
-cube = pyrect3d.Cube((0, 0, -5))
-app.run()
-```
-
-> Python 扩展是**薄绑定层**，依赖核心动态库，不把内核静态打包。
-
----
-
-## 19. 返回值与错误约定
-
-| 场景 | 约定 |
-|------|------|
-| `bool` 返回 | `false` 表示失败 / 模块被裁剪 |
-| 指针返回（`createUI` / `createVideoPlayer`） | `nullptr` 表示失败或模块被裁剪 |
-| `Scene::getEntity` | 不存在返回 `nullptr` |
-| id 类返回 | `-1` 表示失败 |
-| `EventType` 事件携带失败 | `payload.code < 0` |
-| `HitResult.hit` | `false` 表示未命中 |
-
----
-
-## 20. v0.1 → v0.2 变更摘要
-
-### 新增
-- `message.h`：主消息队列 + 子消息队列 + 六级事件优先级 + `App::run` 统一启动。
-- `explicit.h` / `implicit.h`：**显式 API 与隐式 API 双轨**，弱绑定规则明确。
-- `video.h`：全局 `MediaManager` + 多播放器实例 + 子线程解码 + 动态视频材质 + 播放器事件按子队列路由。
-- `collision.h`：**双碰撞箱**（物理箱 / 模型箱含肢体）+ 8 种碰撞事件 + 射线结果入队。
-- `renderer.h`：`RenderCommand` 合批、`DirtyRegion` 局部更新、`Compositor` 2D/3D 分层合成、`applyEffect3D`。
-- `gui.h`：`GuiEvent` 从 2 种扩到 9 种（进入/退出/按下/松开/拖动/拖出/区域外松开）。
-- `Scene::cloneEntity` / `Scene::summonEntity`（克隆与召唤并存）。
-- 构建：`PYRECT3D_LIB_TYPE`（DLL/LIB）、模块裁剪开关、交互式 `build.bat`。
-- 分发：`WEB/`（单包 + 多包）、`Android/apk/`（占位契约）。
-
-### 修复
-- `Renderer::drawEntity` 每帧清屏导致多实体只显示最后一个 → 改为 `beginFrame/endFrame` 帧边界。
-- `MessageQueue::dispatch` 无 handler 时误吞消息 → 改为保留给 `poll()`。
-- `AABB` 射线起点在盒内时命中距离取错 → 统一 `t = (tNear > 0) ? tNear : tFar`。
-- CMake 引用不存在的 `soft_raytracer.cpp` → 合并回 `renderer.cpp`。
-
-### 兼容性
-- 头文件路径与命名空间不变（`#include <PyRecT3D/*.h>`、`namespace pyrect3d`）。
-- v0.1 的 `Engine::run/pump`、`Gui::addWidget`、`Audio`、`ObjLoader` 全部保留。
-
----
-
-## 21. 给 AI 的调用模板（可直接复制）
-
-### 21.1 最小可运行（隐式 API）
-
-```
-用 PyRecT3D 写一个程序：
-1. #include <PyRecT3D/implicit.h>，using namespace pyrect3d;
-2. main 里调用 quick::runSetup(1280, 720, "标题", []{ ... });
-3. 场景里用 quick::cube 建方块，quick::clone 复制，quick::move/rotate/scale 变换
-4. UI 用 quick::button，挂 onClick / onEnter / onDragOut
-5. 需要视频就 quick::video("path", true)
-```
-
-### 21.2 多窗口（显式 API）
-
-```
-1. #include <PyRecT3D/explicit.h>
-2. ExplicitApp app; app.configure(cfg);
-3. app.createWindow(desc) × N
-4. app.mountQueues()           ← 多窗口必须
-5. createUI() + bindWindow()   ← 每个窗口必须
-6. createVideoPlayer(desc, win) ← 显式绑定
-7. app.run()
-```
-
-### 21.3 常见陷阱自查
-
-- [ ] 子线程是否碰了 `gl*`？（必须改为投递渲染指令）
-- [ ] WASD / 摇杆是否做了向量钳位？
-- [ ] 多窗口是否 `mountQueues()` 了？
-- [ ] UI / 播放器在多窗口下是否显式绑定？
-- [ ] 是否在 `beginFrame()` 与 `endFrame()` 之间画多个实体？
-- [ ] 页面隐藏 / App 暂停是否调用了 `release_gpu_resources()`（且幂等）？
-- [ ] 播放器事件是否按 `targetQueue` 路由，没有广播给所有窗口？
-
----
-
-*PyRecT3D v0.2 · GPL-3.0 · 本文档随代码同步维护*
