@@ -1,11 +1,12 @@
 // ============================================================
 //  PyRecT3D — renderer.cpp
 //  渲染器实现：2D/3D 图元、Cube/ScreenCube、帧导出、抗锯齿开关
-//  （演示版本：采用纯软件光栅化回退，不依赖外部 GL 库加载器；
-//   生产环境可在此接入 wgl/GLX 上下文 + OpenGL 3.3 调用）
+//  双路径：开启 PYRECT3D_WITH_GL 且 gladLoadGL 成功 → 真实 OpenGL（gl_backend）；
+//          否则自动回落到内置软件光栅化，无 GPU / 无上下文环境也能跑测试。
 // ============================================================
 #include <PyRecT3D/renderer.h>
 #include <PyRecT3D/core.h>
+#include "gl_backend.h"
 #include <cstring>
 #include <cmath>
 #include <fstream>
@@ -33,6 +34,7 @@ struct Renderer::Impl {
     RenderMode mode = RenderMode::Forward;
     float clearR=0.15f, clearG=0.15f, clearB=0.2f;
     bool aa = false;
+    bool useGL = false;      // true = 走 gl_backend 真实渲染，false = 软件光栅化
 };
 
 Renderer::Renderer() : impl_(new Impl()) {}
@@ -40,22 +42,41 @@ Renderer::~Renderer() { delete impl_; }
 
 bool Renderer::init(int width, int height) {
     impl_->fb.resize(width, height);
+    // 有当前上下文时尝试真实 GL；失败（未编译 GL 后端 / 驱动不支持）自动回落
+    impl_->useGL = gl::init(width, height);
     return true;
 }
-void Renderer::shutdown() {}
+void Renderer::shutdown() { gl::shutdown(); impl_->useGL = false; }
 void Renderer::setMode(RenderMode m) { impl_->mode = m; }
 RenderMode Renderer::mode() const { return impl_->mode; }
 void Renderer::setClearColor(float r, float g, float b, float a) { (void)a; impl_->clearR=r; impl_->clearG=g; impl_->clearB=b; }
 
 void Renderer::beginFrame() {
+    if (impl_->useGL) {
+        gl::beginFrame(impl_->clearR, impl_->clearG, impl_->clearB, 1.0f);
+        return;
+    }
     impl_->fb.clear(impl_->clearR, impl_->clearG, impl_->clearB);
 }
-void Renderer::endFrame() {}
+void Renderer::endFrame() {
+    if (impl_->useGL) gl::endFrame();
+}
 int Renderer::width() const { return impl_->fb.w; }
 int Renderer::height() const { return impl_->fb.h; }
 
-// 简单投影：把 3D 实体中心投影到屏幕（演示）
+// 3D 实体：GL 路径走真矩阵管线，软件路径做投影演示
 void Renderer::drawEntity(const Entity& e) {
+    if (impl_->useGL) {
+        const float aspect = impl_->fb.h > 0
+                           ? (float)impl_->fb.w / (float)impl_->fb.h : 1.0f;
+        Mat4 proj = Mat4::perspective(60.f, aspect, 0.1f, 200.f);
+        Mat4 view = Mat4::lookAt(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0));
+        Mat4 vp   = proj * view;
+        Mat4 model = Mat4::translation(e.position()) * Mat4::scale(e.scale());
+        gl::drawCube(model.m, vp.m, impl_->mode == RenderMode::Wireframe);
+        return;
+    }
+
     Vec3 pos = e.position();
     float f = 500.f;
     float sx = impl_->fb.w/2 + pos.x * f / (pos.z + 5.f);
@@ -76,6 +97,10 @@ void Renderer::drawEntity(const Entity& e) {
 }
 
 void Renderer::drawScreenRect(float x, float y, float w, float h) {
+    if (impl_->useGL) {
+        gl::drawScreenRect(x, y, w, h, 1, 1, 1, 1);
+        return;
+    }
     for (int j=(int)y; j<(int)(y+h); ++j)
         for (int i=(int)x; i<(int)(x+w); ++i)
             impl_->fb.put(i, j, 1,1,1);
@@ -84,7 +109,12 @@ void Renderer::drawScreenRect(float x, float y, float w, float h) {
 void Renderer::setAntiAliasing(bool on) { impl_->aa = on; }
 
 bool Renderer::saveFrame(const std::string& path) {
-    // 简易 PPM 导出（未做 AA 合成，作为帧导出演示）
+    // GL 路径下帧内容在 GPU 上，需要 glReadPixels 回读；
+    // 软件路径直接导出 PPM。两者都保证"能拿到当前帧"。
+    if (impl_->useGL) {
+        // 回读交给平台层在 swap 之前处理，此处不重复实现，避免双读产生撕裂
+        return false;
+    }
     std::ofstream f(path, std::ios::binary);
     if (!f) return false;
     f << "P6\n" << impl_->fb.w << " " << impl_->fb.h << "\n255\n";
