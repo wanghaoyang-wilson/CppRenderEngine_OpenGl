@@ -1,0 +1,13 @@
+{
+  "name": "PyRecT3D",
+  "version": "0.2.0",
+  "mode": "multi-package",
+  "backend": "GLES3/WebGL2",
+  "entry": "pyr3d_main.js",
+  "mainPackageLimit": "4MB",
+  "files": [
+    { "path": "pyr3d_main.js",   "role": "main",  "size": 0, "sha256": "PLACEHOLDER" },
+    { "path": "pyr3d_main.wasm", "role": "main",  "size": 0, "sha256": "PLACEHOLDER" }
+  ],
+  "notes": "占位清单。运行 WEB/build_wasm_multi.sh 后由脚本重新生成真实清单（含资源分片与 sha256）。"
+}

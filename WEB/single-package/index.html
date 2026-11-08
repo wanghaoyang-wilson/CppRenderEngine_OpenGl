@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>PyRecT3D — WASM 单包模式</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #101014; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #hud {
+      position: fixed; left: 12px; top: 12px; color: #cfd3da;
+      font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace;
+      background: rgba(0,0,0,.45); padding: 8px 12px; border-radius: 8px;
+      pointer-events: none; white-space: pre;
+    }
+    #joy {
+      position: fixed; left: 24px; bottom: 24px; width: 120px; height: 120px;
+      border: 1px solid rgba(255,255,255,.25); border-radius: 50%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">PyRecT3D v0.2 · WASM 单包 · GLES3/WebGL2
+等待引擎加载…</div>
+  <div id="joy"></div>
+
+  <script src="../bridge/pyrect3d_web.js"></script>
+  <script>
+    (async () => {
+      const hud = document.getElementById("hud");
+      try {
+        const app = await PyRecT3DWeb.init({
+          wasmPath: "pyr3d_single.js",
+          width: window.innerWidth,
+          height: window.innerHeight,
+          clampInput: true,     // 摇杆向量钳位：斜向不再 1.414 倍加速
+        });
+
+        // 隐式 API：与桌面端同名同参
+        const a = app.cube(0, 0, -5);
+        const b = app.cube(2, 0, -6);
+        const c = app.clone(a);
+        app.move(c, -2, 0, -5);
+
+        hud.textContent =
+          "PyRecT3D v0.2 · WASM 单包 · GLES3/WebGL2\n" +
+          "WASD / 鼠标 / 双指摇杆 · 克隆与召唤双内置\n" +
+          "实体: " + a + " / " + b + " / clone=" + c;
+
+        app.start();
+      } catch (err) {
+        hud.textContent = "启动失败：" + err.message;
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>

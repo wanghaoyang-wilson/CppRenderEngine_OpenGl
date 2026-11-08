@@ -103,8 +103,18 @@ public:
     void removeEntity(std::int64_t id);
     Entity* getEntity(std::int64_t id);
 
+    // 克隆：复制现有实体当前完整状态（位置 / 旋转 / 缩放）并加入场景。
+    // 与「召唤」不同：召唤按预制体初始参数新建，克隆拷贝的是场上现成状态。
+    std::int64_t cloneEntity(std::int64_t id);
+    // 从模板实体按新位置召唤一个实例
+    std::int64_t summonEntity(std::int64_t prototypeId, const Vec3& position);
+
     // 射线检测：返回命中的实体 id 与距离
     RaycastHit raycast(const Ray& ray);
+
+    // 遍历（渲染 / 物理 / 编辑器使用）
+    std::size_t entityCount() const;
+    void forEach(const std::function<void(std::int64_t, Entity&)>& fn) const;
 
 private:
     struct Impl;

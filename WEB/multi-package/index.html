@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>PyRecT3D — WASM 多包模式</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0d0f13; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #hud {
+      position: fixed; left: 12px; top: 12px; color: #cfd3da;
+      font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace;
+      background: rgba(0,0,0,.45); padding: 8px 12px; border-radius: 8px;
+      pointer-events: none; white-space: pre;
+    }
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #9fb0c4; font: 14px ui-monospace, monospace; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">PyRecT3D v0.2 · WASM 多包 · GLES3/WebGL2</div>
+  <div id="loading">正在拉取分包清单…</div>
+
+  <script src="../bridge/pyrect3d_web.js"></script>
+  <script>
+    // 多包模式：先读 manifest.json，按需拉主包与资源分片（支持断点续传）
+    async function loadManifest() {
+      const res = await fetch("manifest.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("manifest.json 缺失，请先运行 WEB/build_wasm_multi.sh");
+      return res.json();
+    }
+
+    async function preload(manifest, onProgress) {
+      const main = manifest.files.filter(f => f.role === "main");
+      const assets = manifest.files.filter(f => f.role === "asset");
+      let done = 0;
+      const total = manifest.files.length;
+
+      for (const f of main) {
+        // 主包必须全部就绪才能启动引擎
+        await fetch(f.path, { cache: "force-cache" });
+        onProgress(++done, total, f.path);
+      }
+      // 资源分片并发预热（真机上按需懒加载更省流量）
+      await Promise.all(assets.map(async f => {
+        await fetch(f.path, { cache: "force-cache" });
+        onProgress(++done, total, f.path);
+      }));
+    }
+
+    (async () => {
+      const hud = document.getElementById("hud");
+      const loading = document.getElementById("loading");
+      try {
+        const manifest = await loadManifest();
+        await preload(manifest, (d, t, name) => {
+          loading.textContent = `加载分包 ${d}/${t}：${name}`;
+        });
+
+        const app = await PyRecT3DWeb.init({
+          wasmPath: "pyr3d_main.js",
+          width: window.innerWidth,
+          height: window.innerHeight,
+          clampInput: true,
+        });
+
+        const a = app.cube(0, 0, -5);
+        app.video("assets/demo.mp4", true);   // 资源来自分包
+
+        loading.style.display = "none";
+        hud.textContent =
+          "PyRecT3D v0.2 · 多包模式\n" +
+          "主包 " + manifest.files.filter(f => f.role === "main").length + " 个 · " +
+          "资源分片 " + manifest.files.filter(f => f.role === "asset").length + " 个\n" +
+          "实体: " + a;
+        app.start();
+      } catch (err) {
+        loading.textContent = "启动失败：" + err.message;
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>
