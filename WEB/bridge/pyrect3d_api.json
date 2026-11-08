@@ -1,0 +1,28 @@
+{
+  "name": "PyRecT3D",
+  "version": "0.2.0",
+  "platform": "WebAssembly + WebGL2 (GLES3 semantics)",
+  "principle": "Web 端与桌面端对外 API 完全一致，平台差异只在 bridge 层消化",
+  "bindings": [
+    { "js": "PyRecT3DWeb.init",        "cpp": "ExplicitApp::configure + createWindow", "note": "创建 WebGL2 上下文与引擎窗口实例" },
+    { "js": "PyRecT3DWeb.start",       "cpp": "App::run / ExplicitApp::pump",         "note": "requestAnimationFrame 驱动主循环" },
+    { "js": "PyRecT3DWeb.cube",        "cpp": "quick::cube",                         "note": "隐式 API：创建立方体" },
+    { "js": "PyRecT3DWeb.clone",       "cpp": "quick::clone",                        "note": "克隆：复制场上实体状态" },
+    { "js": "PyRecT3DWeb.move",        "cpp": "quick::move",                         "note": "变换：平移（走消息队列）" },
+    { "js": "PyRecT3DWeb.video",       "cpp": "quick::video",                        "note": "视频：返回每帧变化的动态材质" },
+    { "js": "PyRecT3DWeb._publish",    "cpp": "MainMessageQueue::publish",            "note": "输入事件统一入主消息队列" },
+    { "js": "PyRecT3DWeb._call(_pyr3d_release_gpu_resources)", "cpp": "release_gpu_resources", "note": "页面隐藏时释放 GPU 资源，防显存泄漏" }
+  ],
+  "eventPriority": [
+    { "priority": 0, "name": "WindowInput", "events": ["WindowClose", "WindowMinimize", "WindowMaximize", "WindowBorderChange", "KeyDown", "KeyUp", "MouseMove", "MouseButtonDown", "MouseButtonUp", "MouseWheel"] },
+    { "priority": 1, "name": "Physics",     "events": ["PhysicsTick"] },
+    { "priority": 2, "name": "Collision",   "events": ["CollisionEnter", "CollisionExit", "CollisionStay", "CollisionPress", "CollisionRelease", "CollisionDragOut", "CollisionDragMove", "CollisionClickOutside"] },
+    { "priority": 3, "name": "Audio",       "events": ["AudioFinished"] },
+    { "priority": 4, "name": "Media",       "events": ["VideoFinished", "VideoPaused", "VideoError", "VideoFrameReady"] },
+    { "priority": 5, "name": "Normal",      "events": ["TransformMove", "TransformRotate", "TransformScale", "EntityClone", "EntitySummon", "RaycastHitReport"] }
+  ],
+  "packaging": {
+    "single": { "path": "single-package/", "note": "小游戏平台，不分包，全部打一个 wasm" },
+    "multi":  { "path": "multi-package/",  "note": "抖音/小红书，主包 + 资源分片，manifest.json 描述" }
+  }
+}
