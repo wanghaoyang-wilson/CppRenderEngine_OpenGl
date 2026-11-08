@@ -5,7 +5,7 @@
 #  产物：
 #    multi-package/pyr3d_main.wasm        主包（引擎核心）
 #    multi-package/chunks/assets_N.pak    资源分片
-#    multi-package/manifest.json          分包清单
+#    multi-package/manifest.json         分包清单
 # ============================================================
 set -e
 cd "$(dirname "$0")/.."
@@ -22,28 +22,29 @@ mkdir -p "$CHUNKS"
 SRC=$(find cpp/src -name '*.cpp' \
       ! -name 'win7_input.cpp' \
       ! -name 'x11_input.cpp' \
-      ! -name 'binding.cpp')
+      ! -name 'binding.cpp' \
+      ! -name 'bind_*.cpp')
 
 echo "=================================================="
 echo " 构建 WASM 多包（主包 + 资源分包）"
 echo "=================================================="
 
 # ---- 主包：引擎核心（不含资源）----
-emcc $SRC \
+em++ $SRC \
   -Icpp/include -Icpp/src \
   -std=c++17 \
   -O3 -s WASM=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME=createPyRecT3D \
-  -s ENVIRONMENT=web \
+  -s ENVIRONMENT=web,node \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
   -s TOTAL_MEMORY=64MB \
   -DPYRECT3D_PLATFORM_WEB=1 \
   -DPYRECT3D_WITH_FFMPEG=0 \
   -o "$OUT/pyr3d_main.js"
 
-# ---- 资源分包：每个分片独立可下载，支持断点续传标志 ----
+# ---- 资源分片：每个分片独立可下载，支持断点续传标志 ----
 shopt -s nullglob
 for dir in assets/*/; do
   name=$(basename "$dir")

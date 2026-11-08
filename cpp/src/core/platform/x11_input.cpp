@@ -8,7 +8,7 @@
 //  - Alt+F4 / 窗口关闭 → WM_DELETE_WINDOW
 //  - GL 上下文：GLX
 // ============================================================
-#if defined(__linux__) && !defined(_WIN32)
+#if defined(__linux__) && !defined(_WIN32) && !defined(__ANDROID__)
 #include "platform_private.h"
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
