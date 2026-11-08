@@ -1,39 +1,60 @@
 #!/usr/bin/env bash
 # ============================================================
-#  PyRecT3D  Linux 一键构建脚本 (X11)
-#  使用 CMake + make，源码优先编译，无预编译二进制
+#  PyRecT3D v0.2 — Linux / 类 Unix 一键构建
+#  用法：
+#    ./build.sh                        # 默认：shared + Release + 全模块
+#    ./build.sh static                 # 构建静态库 libPyRecT3D.a
+#    ./build.sh shared debug           # 动态库调试版
+#    ./build.sh static release trim    # 裁剪模块（交互询问）
 # ============================================================
 set -e
 cd "$(dirname "$0")"
 
-echo "=========================================="
-echo "  PyRecT3D Build (Linux / X11)"
-echo "=========================================="
+LIBTYPE="${1:-shared}"
+BUILD_TYPE="${2:-release}"
+TRIM="${3:-}"
 
-# 依赖检查
-for cmd in cmake make g++; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "[ERROR] '$cmd' not found. Install build-essential + cmake."
-    exit 1
-  fi
-done
-
-# X11 开发头文件检查
-if ! pkg-config --exists x11; then
-  echo "[WARN] X11 dev headers not found. Install libx11-dev."
+if [ "$LIBTYPE" = "lib" ] || [ "$LIBTYPE" = "static" ]; then
+  LIBTYPE=static
+else
+  LIBTYPE=shared
 fi
 
-mkdir -p build
-cd build
+if [ "$BUILD_TYPE" = "debug" ]; then
+  BUILD_TYPE=Debug
+else
+  BUILD_TYPE=Release
+fi
 
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j"$(nproc)"
+WITH_GUI=ON; WITH_VIDEO=ON; WITH_AUDIO=ON; WITH_PHYSICS=ON; WITH_RAYTRACER=ON
 
-cd ..
+if [ "$TRIM" = "trim" ]; then
+  echo "[模块裁剪] 直接回车表示保留"
+  read -r -p "  保留 GUI        (y/n): " a; [ "$a" = "n" ] && WITH_GUI=OFF
+  read -r -p "  保留 视频       (y/n): " b; [ "$b" = "n" ] && WITH_VIDEO=OFF
+  read -r -p "  保留 音频       (y/n): " c; [ "$c" = "n" ] && WITH_AUDIO=OFF
+  read -r -p "  保留 物理/碰撞  (y/n): " d; [ "$d" = "n" ] && WITH_PHYSICS=OFF
+  read -r -p "  保留 软光追     (y/n): " e; [ "$e" = "n" ] && WITH_RAYTRACER=OFF
+fi
+
+echo "=============================================="
+echo " PyRecT3D  lib=$LIBTYPE  config=$BUILD_TYPE"
+echo "=============================================="
+
+mkdir -p build && cd build
+cmake .. \
+  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+  -DPYRECT3D_LIB_TYPE="$LIBTYPE" \
+  -DPYRECT3D_WITH_GUI="$WITH_GUI" \
+  -DPYRECT3D_WITH_VIDEO="$WITH_VIDEO" \
+  -DPYRECT3D_WITH_AUDIO="$WITH_AUDIO" \
+  -DPYRECT3D_WITH_PHYSICS="$WITH_PHYSICS" \
+  -DPYRECT3D_WITH_RAYTRACER="$WITH_RAYTRACER" \
+  -DPYRECT3D_BUILD_PYTHON=ON
+
+cmake --build . -j"$(nproc)"
 
 echo
-echo "=========================================="
-echo "  BUILD OK. Outputs:"
-echo "    core so : build/libPyRecT3D.so"
-echo "    python  : py/package/ (if pybind11 present)"
-echo "=========================================="
+echo "构建完成："
+ls -lh libPyRecT3D.* 2>/dev/null || true
+echo "冒烟测试： ./smoke_v2"
