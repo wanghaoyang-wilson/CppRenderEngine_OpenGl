@@ -22,8 +22,8 @@ python -c "import sys;sys.path.insert(0,'py/package');import pyrect3d_binding as
 
 | 文件 | 导出内容 |
 |------|----------|
-| `cpp/src/binding/binding.cpp` | 模块入口 `PYBIND11_MODULE(pyrect3d_binding)`，只调用各 `bind_*` |
-| `cpp/src/binding/binding_common.h` | 公共 include + 统一命名空间 + 各注册函数声明 |
+| `cpp/src/bindings/python/binding.cpp` | 模块入口 `PYBIND11_MODULE(pyrect3d_binding)`，只调用各 `bind_*` |
+| `cpp/src/bindings/python/binding_common.h` | 公共 include + 统一命名空间 + 各注册函数声明 |
 | `bind_math.cpp` | `Vec2 / Vec3 / Vec4 / Mat4 / Ray / RaycastHit / AABB` |
 | `bind_core.cpp` | `Key / InputState / Entity / Scene / Engine` |
 | `bind_message.cpp` | `EventPriority / EventType / MessagePayload / Message / MessageQueue / MainMessageQueue / App` |
@@ -201,7 +201,7 @@ cpp/third_party/glad/glad.c    5 KB   桌面 WGL/GLX 加载、EGL 注入入口
 
 ### 22.3 后端封装层（内部头，不对外暴露）
 
-`cpp/src/renderer/gl_backend.h` 是引擎唯一的 GL 接触面，上层只说"画什么"：
+`cpp/src/graphics/gl_backend.h` 是引擎唯一的 GL 接触面，上层只说"画什么"：
 
 ```cpp
 namespace pyrect3d { namespace gl {
