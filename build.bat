@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  PyRecT3D v0.2 — 交互式构建（Windows / Win7 及以上）
+REM  PyRecT3D v0.2.1 — 交互式构建（Windows / Win7 及以上）
 REM
 REM  这一版彻底不依赖 CMake 与 NMake：
 REM    只用 MSVC 的 cl.exe / link.exe / lib.exe 直接编译源码，
@@ -12,7 +12,7 @@ REM  中文只出现在这些 REM 注释里，不影响运行。
 REM ============================================================
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-title PyRecT3D v0.2 build
+title PyRecT3D v0.2.1 build
 
 set "SRC=cpp\src"
 set "INC=cpp\include"
@@ -34,7 +34,7 @@ set "CL=cl"
 set "VSPATH="
 
 echo ============================================================
-echo   PyRecT3D v0.2 build   (no CMake, no NMake)
+echo   PyRecT3D v0.2.1 build   (no CMake, no NMake)
 echo   compiler cl.exe   linker link.exe   archiver lib.exe
 echo ============================================================
 echo.
@@ -154,6 +154,8 @@ REM ---------- source list (keep in sync with CMakeLists.txt) ----------
 set "FILES="
 set "FILES=%FILES% %SRC%\foundation\math\math.cpp"
 set "FILES=%FILES% %SRC%\foundation\io\obj_loader.cpp"
+set "FILES=%FILES% %SRC%\foundation\io\fbx_loader.cpp"
+set "FILES=%FILES% %SRC%\foundation\io\model_animation.cpp"
 set "FILES=%FILES% %SRC%\core\engine.cpp"
 set "FILES=%FILES% %SRC%\core\event_loop.cpp"
 set "FILES=%FILES% %SRC%\core\message_queue.cpp"
@@ -170,7 +172,7 @@ if "%WITH_PHYSICS%"=="1" set "FILES=%FILES% %SRC%\physics\collision_world.cpp"
 if exist "%SRC%\core\platform\win7_input.cpp" set "FILES=%FILES% %SRC%\core\platform\win7_input.cpp"
 
 REM ---------- compile flags ----------
-set "DEFS=/DPYRECT3D_WITH_GL=%GL% /DPYRECT3D_WITH_GUI=%WITH_GUI% /DPYRECT3D_WITH_VIDEO=%WITH_VIDEO% /DPYRECT3D_WITH_AUDIO=%WITH_AUDIO% /DPYRECT3D_WITH_PHYSICS=%WITH_PHYSICS% /D_WIN32_WINNT=0x0601"
+set "DEFS=/DPYRECT3D_WITH_GL=%GL% /DPYRECT3D_WITH_GUI=%WITH_GUI% /DPYRECT3D_WITH_VIDEO=%WITH_VIDEO% /DPYRECT3D_WITH_AUDIO=%WITH_AUDIO% /DPYRECT3D_WITH_PHYSICS=%WITH_PHYSICS% /DPYRECT3D_WITH_FBX=1 /D_WIN32_WINNT=0x0601"
 set "DEFS=%DEFS% /I"%INC%" /I"%INCSRC%" /I"%GLAD%""
 
 if "%LIBTYPE%"=="DLL" (set "LIBDEF=/DPYRECT3D_BUILD_DLL=1") else (set "LIBDEF=/DPYRECT3D_STATIC=1")
