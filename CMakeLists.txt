@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
-project(PyRecT3D VERSION 0.2.0 LANGUAGES C CXX)
+project(PyRecT3D VERSION 0.2.1 LANGUAGES C CXX)
 
 # ============================================================
-#  PyRecT3D — C++ OpenGL 2D/3D 渲染引擎（v0.2）
+#  PyRecT3D — C++ OpenGL 2D/3D 渲染引擎（v0.2.1）
 #  平台：Windows (最低 Win7) / Linux / Android(GLES3) / Web(WASM+WebGL2)
 #  图形：OpenGL 3.3 Core（桌面） / OpenGL ES 3.0（Android / WebGL2）
 #  构建：源码优先编译，不加载任何预编译二进制；不使用预编译头
@@ -42,6 +42,7 @@ option(PYRECT3D_WITH_PHYSICS  "编译物理/碰撞模块"   ON)
 option(PYRECT3D_WITH_RAYTRACER "编译软光追模块"     ON)
 option(PYRECT3D_WITH_FFMPEG   "使用外部 FFmpeg 解码" OFF)
 option(PYRECT3D_WITH_GL       "启用 glad + 真实 OpenGL 后端（默认软件回退）" OFF)
+option(PYRECT3D_WITH_FBX      "启用轻量 ASCII FBX 加载器与动画骨架" ON)
 
 # ---------- 源文件清单（按 cpp/LAYOUT.md 的分层） ----------
 set(PYRECT3D_SOURCES
@@ -56,6 +57,8 @@ set(PYRECT3D_SOURCES
   # foundation
   ${PYRECT3D_SRC_DIR}/foundation/math/math.cpp
   ${PYRECT3D_SRC_DIR}/foundation/io/obj_loader.cpp
+  ${PYRECT3D_SRC_DIR}/foundation/io/fbx_loader.cpp
+  ${PYRECT3D_SRC_DIR}/foundation/io/model_animation.cpp
   # graphics
   ${PYRECT3D_SRC_DIR}/graphics/renderer.cpp
   ${PYRECT3D_SRC_DIR}/graphics/compositor.cpp
@@ -66,6 +69,11 @@ set(PYRECT3D_SOURCES
 # GL 后端：glad 加载器（GL 3.3 Core / GLES 3.0 共用）
 if(PYRECT3D_WITH_GL)
   list(APPEND PYRECT3D_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cpp/third_party/glad/glad.c)
+endif()
+if(NOT PYRECT3D_WITH_FBX)
+  list(REMOVE_ITEM PYRECT3D_SOURCES
+    ${PYRECT3D_SRC_DIR}/foundation/io/fbx_loader.cpp
+    ${PYRECT3D_SRC_DIR}/foundation/io/model_animation.cpp)
 endif()
 
 if(PYRECT3D_WITH_GUI)
@@ -113,6 +121,11 @@ endforeach()
 
 if(PYRECT3D_WITH_FFMPEG)
   target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_FFMPEG=1)
+endif()
+if(PYRECT3D_WITH_FBX)
+  target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_FBX=1)
+else()
+  target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_FBX=0)
 endif()
 if(PYRECT3D_WITH_GL)
   target_compile_definitions(PyRecT3D PRIVATE PYRECT3D_WITH_GL=1)
