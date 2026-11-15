@@ -100,6 +100,46 @@ static void bind_extra(py::module_& m) {
             if (!ObjLoader::loadFromMemory(content, model)) return py::object(py::none());
             return py::cast(model);
         }, py::arg("content"));
+
+    py::class_<Bone>(m, "Bone")
+        .def_readonly("name", &Bone::name)
+        .def_readonly("parent", &Bone::parent)
+        .def_readonly("bind_position", &Bone::bindPosition)
+        .def_readonly("bind_rotation", &Bone::bindRotation)
+        .def_readonly("bind_scale", &Bone::bindScale);
+
+    py::class_<AnimationClip>(m, "AnimationClip")
+        .def_readonly("name", &AnimationClip::name)
+        .def_readonly("duration", &AnimationClip::duration)
+        .def_readonly("fps", &AnimationClip::framesPerSecond);
+
+    py::class_<AnimatedModel>(m, "AnimatedModel")
+        .def_readonly("name", &AnimatedModel::name)
+        .def_readonly("bones", &AnimatedModel::bones)
+        .def_readonly("clips", &AnimatedModel::clips)
+        .def("bone_count", &AnimatedModel::boneCount)
+        .def("clip_count", &AnimatedModel::clipCount)
+        .def("has_animation", &AnimatedModel::hasAnimation);
+
+    py::class_<FbxModel>(m, "FbxModel")
+        .def_readonly("mesh", &FbxModel::mesh)
+        .def_readonly("animation", &FbxModel::animation)
+        .def_readonly("binary", &FbxModel::binary)
+        .def_readonly("valid", &FbxModel::valid)
+        .def_readonly("warning", &FbxModel::warning);
+
+    py::class_<FbxLoader>(m, "FbxLoader")
+        .def_static("load", [](const std::string& path) {
+            FbxModel model;
+            if (!FbxLoader::load(path, model)) return py::object(py::none());
+            return py::cast(model);
+        }, py::arg("path"))
+        .def_static("load_from_memory", [](const std::string& content) {
+            FbxModel model;
+            if (!FbxLoader::loadFromMemory(content, model)) return py::object(py::none());
+            return py::cast(model);
+        }, py::arg("content"))
+        .def_static("is_binary", &FbxLoader::isBinaryFbx, py::arg("path"));
 }
 
 void bind_media(py::module_& m) {
