@@ -21,6 +21,8 @@
 #include <PyRecT3D/video.h>
 #include <PyRecT3D/audio.h>
 #include <PyRecT3D/io.h>
+#include <PyRecT3D/fbx_loader.h>
+#include <PyRecT3D/model_animation.h>
 
 namespace py = pybind11;
 using namespace pyrect3d;
@@ -34,3 +36,4 @@ void bind_renderer(py::module_& m);
 void bind_gui(py::module_& m);
 void bind_collision(py::module_& m);
 void bind_media(py::module_& m);      // 视频 + 音频 + 模型 IO
+
