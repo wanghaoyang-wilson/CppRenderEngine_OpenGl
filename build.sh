@@ -68,6 +68,8 @@ DEFS="$DEFS -I$INC -I$SRC -I$GLAD"
 FILES=(
   "$SRC/foundation/math/math.cpp"
   "$SRC/foundation/io/obj_loader.cpp"
+  "$SRC/foundation/io/fbx_loader.cpp"
+  "$SRC/foundation/io/model_animation.cpp"
   "$SRC/core/engine.cpp"
   "$SRC/core/event_loop.cpp"
   "$SRC/core/message_queue.cpp"
