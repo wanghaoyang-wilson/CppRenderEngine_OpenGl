@@ -1,7 +1,8 @@
 // ============================================================
 //  PyRecT3D — tests/smoke_v2.cpp
-//  v0.2 无头冒烟测试：消息队列优先级 / 子队列路由 / 碰撞事件 /
-//  双碰撞箱射线 / 显式多窗口 UI 绑定 / 视频帧上传 / 合成层脏区域
+//  v0.2.1 无头冒烟测试：消息队列优先级 / 子队列路由 / 碰撞事件 /
+//  双碰撞箱射线 / 显式多窗口 UI 绑定 / 视频帧上传 / 合成层脏区域 /
+//  ASCII FBX 静态网格与动画骨架占位
 // ============================================================
 #include <PyRecT3D/message.h>
 #include <PyRecT3D/explicit.h>
@@ -9,6 +10,7 @@
 #include <PyRecT3D/collision.h>
 #include <PyRecT3D/video.h>
 #include <PyRecT3D/renderer.h>
+#include <PyRecT3D/fbx_loader.h>
 #include <cstdio>
 #include <cstring>
 #include <thread>
@@ -209,9 +211,32 @@ static void testVideo() {
     check(MediaManager::instance().playerCount() >= 1, "全局管理器持有实例");
 }
 
-// ---------- 8. 渲染指令合并 / 脏区域 ----------
+// ---------- 8. FBX ASCII 骨架加载 ----------
+static void testFbxAscii() {
+    std::printf("[8] FBX ASCII 静态网格 + 动画占位\n");
+    const std::string fbx = R"(
+; minimal ASCII FBX fixture
+Model: 'Cube'
+Vertices: 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0
+Normals: 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0
+TextureCoord: 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0
+PolygonVertexIndex: 0, 1, 2
+Material: 'default'
+)";
+
+    FbxModel model;
+    check(FbxLoader::loadFromMemory(fbx, model), "ASCII FBX 解析成功");
+    check(model.valid, "FBX 模型标记为有效");
+    check(model.mesh.mesh.positions.size() >= 9, "已导入三角面顶点");
+    check(model.mesh.mesh.normals.size() >= 9, "已导入法线");
+    check(model.mesh.mesh.uvs.size() >= 6, "已导入 UV");
+    check(model.animation.boneCount() == 0, "0.2.1 骨骼数据为空占位");
+    check(model.animation.clipCount() == 0, "0.2.1 动画曲线为空占位");
+}
+
+// ---------- 9. 渲染指令合并 / 脏区域 ----------
 static void testCompositor() {
-    std::printf("[8] 渲染指令合并 + 局部更新\n");
+    std::printf("[9] 渲染指令合并 + 局部更新\n");
     Renderer r; r.init(320, 240);
     Compositor comp; comp.attach(&r);
 
@@ -234,7 +259,7 @@ static void testCompositor() {
 }
 
 int main() {
-    std::printf("==== PyRecT3D v0.2 冒烟测试 ====\n");
+    std::printf("==== PyRecT3D v0.2.1 冒烟测试 ====\n");
     testPriority();
     testRouting();
     testCollisionZone();
@@ -242,6 +267,7 @@ int main() {
     testExplicit();
     testImplicit();
     testVideo();
+    testFbxAscii();
     testCompositor();
     std::printf("\n结果：PASS=%d FAIL=%d\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
