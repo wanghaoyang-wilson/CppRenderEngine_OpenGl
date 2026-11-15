@@ -3,7 +3,7 @@
 **轻量 C++ 2D/3D 渲染引擎**，底层 OpenGL 3.3 Core ／ Android + Web 走 OpenGL ES 3.0（WebGL2）。
 既是可独立链接的 C++ 库（DLL / LIB），也通过 pybind11 提供 Python 扩展。
 
-> 开发代号：PyRecT3D（Python + ReCursion + 3D）　版本 **0.2.0**　许可证 **GPL-3.0**
+> 开发代号：PyRecT3D（Python + ReCursion + 3D）　版本 **0.2.1**　许可证 **GPL-3.0**
 
 ---
 
@@ -31,7 +31,7 @@
 | **克隆 / 召唤** | `clone`（复制场上现成状态，Scratch 思维）+ `summon`（按模板新建，Unity/UE 思维）双内置 |
 | **视频** | 全局 `MediaManager` 单例 + 多播放器实例，FFmpeg 子线程解码，**解码帧直接包装成动态材质**贴到任意物体 |
 | **GUI** | 按钮 / 文本 / 输入框 / 容器 / 滚动容器，9 种组件事件，支持贴图 |
-| **模型 IO** | OBJ + MTL 加载 |
+| **模型 IO** | OBJ + MTL 加载；0.2.1 增加轻量 ASCII FBX 静态网格、UV、法线与基础动画骨架；二进制 FBX、蒙皮变形器和动画状态机留待后续版本 |
 | **跳平台** | Windows（Win7+）/ Linux（X11）/ Android（NDK + GLES3）/ Web（WASM + WebGL2） |
 
 ### 明确边界
@@ -175,7 +175,7 @@ PyRecT3D/
 │   ├── src/                # 按职责分层，依赖单向
 │   │   ├── foundation/     # 最底层：math/ 与 io/
 │   │   ├── core/           # 引擎 / 消息队列 / 显式 / 隐式 / platform/
-│   │   ├── graphics/       # renderer + gl_backend + compositor
+│   │   ├── graphics/      # renderer + gl_backend + compositor
 │   │   ├── ui/             # 2D 界面
 │   │   ├── physics/        # 双碰撞箱
 │   │   ├── media/          # FFmpeg 播放器
