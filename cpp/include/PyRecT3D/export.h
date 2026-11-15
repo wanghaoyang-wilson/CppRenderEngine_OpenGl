@@ -27,8 +27,8 @@
 // 版本
 #define PYRECT3D_VERSION_MAJOR 0
 #define PYRECT3D_VERSION_MINOR 2
-#define PYRECT3D_VERSION_PATCH 0
-#define PYRECT3D_VERSION_STRING "0.2.0"
+#define PYRECT3D_VERSION_PATCH 1
+#define PYRECT3D_VERSION_STRING "0.2.1"
 
 // ---------- 编译期模块开关（由构建脚本 / CMake 注入） ----------
 // 未定义的模块在构建时被整体裁剪，调用对应 API 返回 false。
@@ -51,3 +51,7 @@
 #ifndef PYRECT3D_WITH_FFMPEG
   #define PYRECT3D_WITH_FFMPEG 0
 #endif
+#ifndef PYRECT3D_WITH_FBX
+  #define PYRECT3D_WITH_FBX 1
+#endif
+
